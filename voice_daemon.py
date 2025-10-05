@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Voice-to-Text Daemon
+AnyWhisper Daemon
 
 Background service that listens for recording triggers via a Unix socket.
 """
@@ -10,17 +10,22 @@ import socket
 import threading
 import signal
 import sys
+import re
 from audio_recorder import AudioRecorder
 from api_client import WhisperAPIClient
 from text_injector import TextInjector
-from config import TEMP_AUDIO_FILE
+from config import (
+    ENABLE_TRANSCRIPTION_ACTIONS,
+    POST_TRANSCRIPTION_ACTIONS,
+    POST_TRANSCRIPTION_OPT_DOT
+)
 
 
 SOCKET_PATH = "/tmp/voice_to_text.sock"
 
 
 class VoiceDaemon:
-    """Background daemon for voice-to-text processing."""
+    """Background daemon for any-whisper processing."""
     
     def __init__(self):
         self.recorder = AudioRecorder()
@@ -49,13 +54,13 @@ class VoiceDaemon:
         
         self.is_recording = True
         print("🎤 Recording started...")
-        # self.notify("Voice to Text", "🎤 Recording... Speak now!")
+        # self.notify("AnyWhisper", "🎤 Recording... Speak now!")
         
         success = self.recorder.start_recording()
         if not success:
             self.is_recording = False
             print("❌ Failed to start recording")
-            self.notify("Voice to Text", "❌ Failed to start recording")
+            self.notify("AnyWhisper", "❌ Failed to start recording")
             return "ERROR"
         
         # Start monitoring thread to detect when recording stops automatically
@@ -69,7 +74,7 @@ class VoiceDaemon:
             return "NOT_RECORDING"
         
         print("⏹️  Stopping recording...")
-        # self.notify("Voice to Text", "⏹️ Processing...")
+        # self.notify("AnyWhisper", "⏹️ Processing...")
         
         # Stop recording and get the audio file
         audio_file = self.recorder.stop_recording()
@@ -77,7 +82,7 @@ class VoiceDaemon:
         
         if not audio_file:
             print("❌ No audio recorded")
-            self.notify("Voice to Text", "❌ No audio recorded")
+            self.notify("AnyWhisper", "❌ No audio recorded")
             return "NO_AUDIO"
         
         # Transcribe in a separate thread to not block
@@ -116,23 +121,49 @@ class VoiceDaemon:
         
         if text:
             print(f"✅ Transcription: {text}")
-            # self.notify("Voice to Text", f"📝 {text[:50]}{'...' if len(text) > 50 else ''}")
+            # self.notify("AnyWhisper", f"📝 {text[:50]}{'...' if len(text) > 50 else ''}")
             
-            # Small delay to allow user to focus target application
-            # import time
-            # time.sleep(0.3)
+            # Check for post-transcription actions (if enabled)
+            post_action = None
+            cleaned_text = text
+            matched_pattern = None
             
-            # Inject the text
-            print("⌨️  Injecting text...")
-            success = self.text_injector.inject_text(text)
+            if ENABLE_TRANSCRIPTION_ACTIONS:
+                for pattern, action in POST_TRANSCRIPTION_ACTIONS.items():
+                    # Optionally add \.? before $ to handle periods Whisper may add
+                    modified_pattern = pattern
+                    if POST_TRANSCRIPTION_OPT_DOT and pattern.endswith('$'):
+                        # Insert \.? before the $
+                        modified_pattern = pattern[:-1] + r'\.?$'
+                    
+                    # Check if pattern matches (case-insensitive)
+                    match = re.search(modified_pattern, text, re.IGNORECASE)
+                    if match:
+                        print(f"🎯 Pattern matched: '{pattern}' → Action: {action}")
+                        post_action = action
+                        matched_pattern = modified_pattern
+                        # Remove the matched pattern from text
+                        cleaned_text = re.sub(modified_pattern, '', text, flags=re.IGNORECASE).strip()
+                        break
             
-            if not success:
-                print("⚠️  Falling back to clipboard...")
-                self.text_injector.copy_to_clipboard(text)
-                self.notify("Voice to Text", "📋 Copied to clipboard (Ctrl+V to paste)")
+            # Inject the text (with cleaned version if pattern was found)
+            text_to_inject = cleaned_text if post_action else text
+            
+            if text_to_inject:  # Only inject if there's text left after cleaning
+                print(f"⌨️  Injecting text: {text_to_inject}")
+                success = self.text_injector.inject_text(text_to_inject, post_action=post_action)
+                
+                if not success:
+                    print("⚠️  Falling back to clipboard...")
+                    self.text_injector.copy_to_clipboard(text_to_inject)
+                    self.notify("AnyWhisper", "📋 Copied to clipboard (Ctrl+V to paste)")
+            elif post_action:
+                # No text to type, just execute the action
+                print(f"⌨️  Executing action: {post_action}")
+                self.text_injector._execute_key_action(post_action)
         else:
             print("❌ Transcription failed")
-            self.notify("Voice to Text", "❌ Transcription failed")
+            self.notify("AnyWhisper", "❌ Transcription failed")
         
         # Clean up temp file
         try:
@@ -214,7 +245,7 @@ class VoiceDaemon:
         os.chmod(SOCKET_PATH, 0o666)
         
         print("=" * 60)
-        print("Voice-to-Text Daemon Started")
+        print("AnyWhisper Daemon Started")
         print("=" * 60)
         print(f"Socket: {SOCKET_PATH}")
         print(f"Display server: {self.text_injector.method}")
@@ -234,7 +265,7 @@ class VoiceDaemon:
         print("\n🛑 Press Ctrl+C to stop")
         print("=" * 60)
         
-        self.notify("Voice to Text", "✅ Daemon started")
+        self.notify("AnyWhisper", "✅ Daemon started")
         
         # Accept connections
         while self.running:

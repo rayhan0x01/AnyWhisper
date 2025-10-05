@@ -2,6 +2,8 @@
 
 import subprocess
 import time
+import os
+import re
 
 
 class TextInjector:
@@ -32,12 +34,13 @@ class TextInjector:
             # Default to X11 if detection fails
             return 'x11'
     
-    def inject_text(self, text):
+    def inject_text(self, text, post_action=None):
         """
         Inject text into the currently focused application.
         
         Args:
             text (str): The text to inject
+            post_action (str): Optional key action to perform after typing (e.g., 'ENTER')
             
         Returns:
             bool: True if successful, False otherwise
@@ -48,14 +51,21 @@ class TextInjector:
         
         # Give a small delay to allow the user to focus the target window
         # (if they were focused on another window when triggering the shortcut)
-        time.sleep(0.1)
+        #time.sleep(0.1)
         
         try:
             if self.method == 'x11':
-                return self._inject_x11(text)
+                success = self._inject_x11(text)
             else:
                 # Wayland - use wtype or ydotool if available
-                return self._inject_wayland(text)
+                success = self._inject_wayland(text)
+            
+            # Execute post-action if specified and injection was successful
+            if success and post_action:
+                time.sleep(0.1)  # Small delay before key action
+                self._execute_key_action(post_action)
+            
+            return success
         except Exception as e:
             print(f"Error injecting text: {e}")
             return False
@@ -109,6 +119,70 @@ class TextInjector:
         except subprocess.CalledProcessError:
             print("Error: Neither ydotool nor wtype found.")
             print("For Wayland, please run setup.sh to download ydotool.")
+            return False
+    
+    def _execute_key_action(self, action):
+        """
+        Execute a key action (e.g., press ENTER).
+        
+        Args:
+            action (str): Key action name (e.g., 'ENTER', 'TAB')
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        from config import YDOTOOL_KEY_CODES
+        
+        # Get key code for the action
+        key_code = YDOTOOL_KEY_CODES.get(action.upper())
+        if not key_code:
+            print(f"Unknown key action: {action}")
+            return False
+        
+        print(f"Executing key action: {action}")
+        
+        try:
+            if self.method == 'x11':
+                return self._execute_key_action_x11(action)
+            else:
+                return self._execute_key_action_wayland(key_code)
+        except Exception as e:
+            print(f"Error executing key action: {e}")
+            return False
+    
+    def _execute_key_action_x11(self, action):
+        """Execute key action using xdotool (X11)."""
+        try:
+            # xdotool uses key names directly
+            subprocess.run(['xdotool', 'key', action], check=True)
+            print(f"Key action '{action}' executed successfully using xdotool.")
+            return True
+        except subprocess.CalledProcessError:
+            print(f"Error: Failed to execute key action with xdotool")
+            return False
+    
+    def _execute_key_action_wayland(self, key_code):
+        """Execute key action using ydotool (Wayland)."""
+        # Get the script directory to find local ydotool
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        local_ydotool = os.path.join(script_dir, 'ydotool')
+        
+        # Try local ydotool first
+        if os.path.exists(local_ydotool) and os.access(local_ydotool, os.X_OK):
+            try:
+                subprocess.run([local_ydotool, 'key'] + key_code.split(), check=True)
+                print(f"Key action executed successfully using local ydotool.")
+                return True
+            except subprocess.CalledProcessError:
+                pass
+        
+        # Try system ydotool
+        try:
+            subprocess.run(['ydotool', 'key'] + key_code.split(), check=True)
+            print(f"Key action executed successfully using system ydotool.")
+            return True
+        except subprocess.CalledProcessError:
+            print("Error: Failed to execute key action with ydotool")
             return False
     
     def copy_to_clipboard(self, text):

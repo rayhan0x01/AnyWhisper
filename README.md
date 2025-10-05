@@ -20,6 +20,7 @@ A VibeCoded project that makes VibeCoding even easier by allowing us to speak ou
 - 🔇 **Automatic Silence Detection**: Stops recording after detecting silence
 - 🖥️ **Display Server Support**: Works with both X11 and Wayland
 - 📋 **Clipboard Fallback**: Copies to clipboard if text injection fails
+- 🔑 **Post-Transcription Actions**: Press pre-defined keys after transcription based on spoken phrases (like hit enter, press tab, etc.)
 - 🔧 **Systemd Integration**: Run as a background service with auto-start
 
 ## Prerequisites
@@ -43,7 +44,7 @@ docker build -t whisper-assistant .
 docker run -d -p 127.0.0.1:4444:4444 --name whisper-assistant whisper-assistant
 ```
 
-### 2. Install the Voice-to-Text Application
+### 2. Install the AnyWhisper Application
 
 Run the setup script:
 
@@ -96,7 +97,7 @@ For X11 users or manual testing:
    ./voice_trigger.py
    ```
 
-### Using Voice-to-Text
+### Using AnyWhisper
 
 1. **Press** the keyboard shortcut (triggers recording)
 2. **Speak** your text clearly
@@ -111,10 +112,35 @@ Edit `config.py` to customize the application:
 
 ```python
 SAMPLE_RATE = 16000  # Sample rate in Hz
-MAX_RECORDING_DURATION = 30  # Maximum recording duration in seconds
+MAX_RECORDING_DURATION = 240  # Maximum recording duration in seconds
 SILENCE_THRESHOLD = 0.01  # Silence detection sensitivity (0.0 to 1.0)
 SILENCE_DURATION = 2.0  # Duration of silence before stopping (seconds)
 ```
+
+### Post-Transcription Actions
+
+Automatically press keys after transcription based on spoken patterns:
+
+```python
+# Enable/disable post-transcription actions
+ENABLE_TRANSCRIPTION_ACTIONS = True  # Set to False to disable this feature
+
+POST_TRANSCRIPTION_ACTIONS = {
+    r'hit enter$': 'ENTER',     # "send a message hit enter" → types text + presses ENTER
+    r'press tab$': 'TAB',       # "john@example.com press tab" → types email + presses TAB
+    r'^enter$': 'ENTER',        # Just say "enter" → presses ENTER only
+}
+
+# Auto-handle periods that Whisper adds at the end
+POST_TRANSCRIPTION_OPT_DOT = True  # Makes patterns flexible to match with/without period
+```
+
+**Example:** Say "git commit -m 'update' hit enter"
+- Transcription: "git commit -m 'update' hit enter." (Whisper may add period)
+- Types: `git commit -m 'update'`
+- Presses: ENTER
+
+See **[POST_TRANSCRIPTION_ACTIONS.md](POST_TRANSCRIPTION_ACTIONS.md)** for detailed documentation.
 
 ### API Endpoint
 

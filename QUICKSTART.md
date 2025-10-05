@@ -1,4 +1,4 @@
-# Voice-to-Text Quick Start Guide
+# AnyWhisper Quick Start Guide
 
 ## TL;DR
 
@@ -45,7 +45,7 @@
 4. Click **"Custom Shortcuts"**
 5. Click the **+** button
 6. Fill in:
-   - Name: `Voice to Text`
+   - Name: `AnyWhisper`
    - Command: `/path/to/AnyWhisper/voice_trigger.py`
    - Shortcut: Press your desired keys (e.g., `Ctrl+Shift+Space`)
 7. Click **Add**
@@ -84,14 +84,14 @@
 ./setup_autostart.sh
 
 # Control
-systemctl --user start voice-to-text    # Start
-systemctl --user stop voice-to-text     # Stop  
-systemctl --user status voice-to-text   # Check status
-systemctl --user enable voice-to-text   # Auto-start on login
-systemctl --user disable voice-to-text  # Disable auto-start
+systemctl --user start any-whisper    # Start
+systemctl --user stop any-whisper     # Stop  
+systemctl --user status any-whisper   # Check status
+systemctl --user enable any-whisper   # Auto-start on login
+systemctl --user disable any-whisper  # Disable auto-start
 
 # View logs
-journalctl --user -u voice-to-text -f
+journalctl --user -u any-whisper -f
 ```
 
 ## Usage Flow
@@ -143,7 +143,7 @@ ps aux | grep voice_daemon
 # Start it
 ./start_daemon.sh
 # or
-systemctl --user start voice-to-text
+systemctl --user start any-whisper
 ```
 
 ### Global shortcut doesn't trigger
@@ -183,13 +183,29 @@ MAX_RECORDING_DURATION = 240  # seconds
 SILENCE_THRESHOLD = 0.01  # 0.0 to 1.0 (higher = more sensitive)
 SILENCE_DURATION = 2.0    # seconds of silence before auto-stop
 
+# Post-transcription actions
+ENABLE_TRANSCRIPTION_ACTIONS = True  # Enable/disable this feature
+
+POST_TRANSCRIPTION_ACTIONS = {
+    r'hit enter$': 'ENTER',     # Auto-press ENTER after typing
+    r'press tab$': 'TAB',       # Auto-press TAB after typing
+}
+
+# Handle periods Whisper adds at end
+POST_TRANSCRIPTION_OPT_DOT = True  # Matches "hit enter" and "hit enter."
+
 # API endpoint
 WHISPER_API_URL = "http://localhost:4444/v1/audio/transcriptions"
 ```
 
+**Pro Tip:** Say "send message hit enter" to type "send message" and press ENTER!
+**Note:** Works even if Whisper adds a period: "send message hit enter."
+
+See [POST_TRANSCRIPTION_ACTIONS.md](POST_TRANSCRIPTION_ACTIONS.md) for more details.
+
 After changing config, restart daemon:
 ```bash
-systemctl --user restart voice-to-text
+systemctl --user restart any-whisper
 ```
 
 ## Advanced Usage

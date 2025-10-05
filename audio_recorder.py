@@ -1,4 +1,4 @@
-"""Audio recording component for voice-to-text application."""
+"""Audio recording component for any-whisper application."""
 
 import sounddevice as sd
 import numpy as np

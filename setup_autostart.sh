@@ -2,7 +2,7 @@
 
 # Setup script to configure the voice daemon to start automatically
 
-echo "Setting up Voice-to-Text daemon autostart..."
+echo "Setting up AnyWhisper daemon autostart..."
 echo ""
 
 DAEMON_PATH="$(pwd)/voice_daemon.py"
@@ -12,9 +12,9 @@ VENV_PYTHON="$(pwd)/venv/bin/python"
 mkdir -p ~/.config/systemd/user/
 
 # Create systemd service file
-cat > ~/.config/systemd/user/voice-to-text.service << EOF
+cat > ~/.config/systemd/user/any-whisper.service << EOF
 [Unit]
-Description=Voice-to-Text Daemon
+Description=AnyWhisper Daemon
 After=graphical-session.target
 
 [Service]
@@ -28,30 +28,30 @@ RestartSec=5
 WantedBy=default.target
 EOF
 
-echo "✅ Systemd service created: ~/.config/systemd/user/voice-to-text.service"
+echo "✅ Systemd service created: ~/.config/systemd/user/any-whisper.service"
 echo ""
 
 # Reload systemd
 systemctl --user daemon-reload
 
 echo "To manage the daemon:"
-echo "  Start:   systemctl --user start voice-to-text"
-echo "  Stop:    systemctl --user stop voice-to-text"
-echo "  Status:  systemctl --user status voice-to-text"
-echo "  Enable:  systemctl --user enable voice-to-text  (auto-start on login)"
-echo "  Disable: systemctl --user disable voice-to-text"
+echo "  Start:   systemctl --user start any-whisper"
+echo "  Stop:    systemctl --user stop any-whisper"
+echo "  Status:  systemctl --user status any-whisper"
+echo "  Enable:  systemctl --user enable any-whisper  (auto-start on login)"
+echo "  Disable: systemctl --user disable any-whisper"
 echo ""
 
 read -p "Do you want to start and enable the daemon now? (y/n) " -n 1 -r
 echo ""
 
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    systemctl --user enable voice-to-text
-    systemctl --user start voice-to-text
+    systemctl --user enable any-whisper
+    systemctl --user start any-whisper
     echo ""
     echo "✅ Daemon started and enabled!"
     sleep 1
-    systemctl --user status voice-to-text --no-pager
+    systemctl --user status any-whisper --no-pager
 fi
 
 echo ""
@@ -61,7 +61,7 @@ echo "   GNOME: Settings → Keyboard → Keyboard Shortcuts → Custom Shortcut
 echo "   KDE: System Settings → Shortcuts → Custom Shortcuts"
 echo ""
 echo "2. Create a new custom shortcut with:"
-echo "   Name: Voice to Text"
+echo "   Name: AnyWhisper"
 echo "   Command: $(pwd)/voice_trigger.py"
 echo "   Shortcut: Ctrl+Shift+Space (or any combination you prefer)"
 echo ""

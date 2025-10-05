@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Setup script for Ubuntu Voice-to-Text Application
+# Setup script for Ubuntu AnyWhisper Application
 
 echo "========================================"
-echo "Ubuntu Voice-to-Text Setup"
+echo "Ubuntu AnyWhisper Setup"
 echo "========================================"
 echo ""
 
