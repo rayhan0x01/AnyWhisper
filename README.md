@@ -15,7 +15,7 @@ A VibeCoded project that makes VibeCoding even easier by allowing us to speak ou
 - 📴 **Fully Offline Transcription**: Your data stays on your device.
 - 🌍 **True Global Shortcuts**: Use native OS shortcuts to trigger recording
 - 🎤 **Press-to-Talk**: Toggle recording with a keyboard shortcut
-- 🤖 **High-Quality Transcription**: Uses OpenAI Whisper for accurate speech-to-text
+- 🤖 **High-Quality Transcription**: Uses [Faster-Whisper](https://github.com/SYSTRAN/faster-whisper) for accurate speech-to-text
 - ⌨️ **Universal Text Injection**: Works with any application (browser, CLI, IDEs, etc.)
 - 🔇 **Automatic Silence Detection**: Stops recording after detecting silence
 - 🖥️ **Display Server Support**: Works with both X11 and Wayland
@@ -43,6 +43,9 @@ docker build -t whisper-assistant .
 # Run the container
 docker run -d -p 127.0.0.1:4444:4444 --name whisper-assistant whisper-assistant
 ```
+
+**Note**: The current Whisper model is from [Faster-Whisper](https://github.com/SYSTRAN/faster-whisper). The model size is set to `small`, which is a 244M parameter model. It's set to run on the CPU so no GPU is needed. You can change the model size by editing the `WHISPER_MODEL_SIZE` environment variable in the `Dockerfile` and running `docker build -t whisper-assistant .` again.
+
 
 ### 2. Install the AnyWhisper Application
 

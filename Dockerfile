@@ -15,8 +15,11 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # Create app directory
 WORKDIR /app
 
+# ENV Whisper Model
+ENV WHISPER_MODEL_SIZE="small"
+
 # Pre-download the model during build
-RUN python -c "from faster_whisper import WhisperModel; WhisperModel('base', device='cpu', compute_type='int8')"
+RUN python -c "from faster_whisper import WhisperModel; WhisperModel('${WHISPER_MODEL_SIZE}', device='cpu', compute_type='int8')"
 
 # Create main.py with embedded code
 RUN echo 'from fastapi import FastAPI, UploadFile, File\n\
@@ -37,7 +40,7 @@ app.add_middleware(\n\
 )\n\
 \n\
 # Initialize the model (already downloaded during build)\n\
-whisper_model = WhisperModel("base", device="cpu", compute_type="int8")\n\
+whisper_model = WhisperModel("WHISPER_MODEL_SIZE", device="cpu", compute_type="int8")\n\
 \n\
 @app.post("/v1/audio/transcriptions")\n\
 async def transcribe_audio(\n\
@@ -95,6 +98,8 @@ async def root():\n\
         "health_check": "/v1/health",\n\
         "transcribe": "/v1/audio/transcriptions"\n\
     }' > main.py
+
+RUN sed -i "s/WHISPER_MODEL_SIZE/${WHISPER_MODEL_SIZE}/g" main.py
 
 # Expose the port
 EXPOSE 4444
