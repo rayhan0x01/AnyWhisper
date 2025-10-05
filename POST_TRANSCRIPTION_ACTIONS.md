@@ -13,7 +13,7 @@ This feature allows you to automatically press keys after transcription based on
 
 ## Configuration
 
-Edit `/home/rayhan/whisper/config.py` to customize:
+Edit `/path/to/AnyWhisper/config.py` to customize:
 
 ### ENABLE_TRANSCRIPTION_ACTIONS
 
@@ -258,14 +258,14 @@ POST_TRANSCRIPTION_ACTIONS = {
 
 ## Examples for VibeCoding
 
-### Terminal Commands
+### Prompt Input
 
-**Say:** "git commit -m 'initial commit' hit enter"
+**Say:** "Center the div, make no mistakes hit enter"
 
 **Result:**
 ```
-git commit -m 'initial commit'
-[ENTER pressed - command executes]
+Center the div, make no mistakes
+[ENTER pressed - your AI agent starts working]
 ```
 
 ### Quick Searches
