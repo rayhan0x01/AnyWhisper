@@ -1,6 +1,6 @@
 # ydotool Integration
 
-This document explains how ydotool has been integrated into the Voice-to-Text application for seamless Wayland support.
+This document explains how ydotool has been integrated into the AnyWhisper application for seamless Wayland support.
 
 ## What Was Done
 
@@ -73,7 +73,7 @@ The daemon:
 3. If not running: starts local `ydotoold` binary
 4. Continues with normal operation
 
-### When You Use Voice-to-Text
+### When You Use AnyWhisper
 
 1. Press global shortcut
 2. Speak your text

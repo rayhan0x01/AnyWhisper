@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Voice-to-Text Trigger Script
+AnyWhisper Trigger Script
 
 This script communicates with the voice daemon to toggle recording.
 Bind this script to a global keyboard shortcut in your DE settings.
@@ -25,7 +25,7 @@ def send_command(command):
         return response
     except FileNotFoundError:
         print("Error: Daemon not running. Start it with: python voice_daemon.py", file=sys.stderr)
-        os.system('notify-send "Voice to Text" "❌ Daemon not running! Start voice_daemon.py" 2>/dev/null &')
+        os.system('notify-send "AnyWhisper" "❌ Daemon not running! Start voice_daemon.py" 2>/dev/null &')
         return None
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)

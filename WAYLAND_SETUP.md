@@ -1,6 +1,6 @@
 # Wayland Global Shortcut Setup
 
-This guide explains how to set up the voice-to-text application with **true OS-level global shortcuts** that work in Wayland.
+This guide explains how to set up the any-whisper application with **true OS-level global shortcuts** that work in Wayland.
 
 ## Architecture
 
@@ -51,7 +51,7 @@ This will:
 2. Scroll down and click **"Custom Shortcuts"** or **"View and Customize Shortcuts"**
 3. Click the **"+"** button to add a new shortcut
 4. Fill in:
-   - **Name**: `Voice to Text`
+   - **Name**: `AnyWhisper`
    - **Command**: `/path/to/AnyWhisper/voice_trigger.py`
    - **Shortcut**: Click "Set Shortcut" and press `Ctrl+Shift+Space` (or your preferred combination)
 5. Click **Add**
@@ -90,22 +90,22 @@ This will:
 
 ```bash
 # Start daemon
-systemctl --user start voice-to-text
+systemctl --user start any-whisper
 
 # Stop daemon
-systemctl --user stop voice-to-text
+systemctl --user stop any-whisper
 
 # Check status
-systemctl --user status voice-to-text
+systemctl --user status any-whisper
 
 # Enable auto-start on login
-systemctl --user enable voice-to-text
+systemctl --user enable any-whisper
 
 # Disable auto-start
-systemctl --user disable voice-to-text
+systemctl --user disable any-whisper
 
 # View logs
-journalctl --user -u voice-to-text -f
+journalctl --user -u any-whisper -f
 ```
 
 ### Manual Testing
@@ -144,7 +144,7 @@ python voice_trigger.py TOGGLE
 
 The daemon isn't started. Run:
 ```bash
-systemctl --user start voice-to-text
+systemctl --user start any-whisper
 # or manually:
 python voice_daemon.py
 ```
@@ -185,6 +185,6 @@ Edit `config.py` to customize:
 
 Changes to config.py require restarting the daemon:
 ```bash
-systemctl --user restart voice-to-text
+systemctl --user restart any-whisper
 ```
 
