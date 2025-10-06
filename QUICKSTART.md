@@ -203,6 +203,35 @@ WHISPER_API_URL = "http://localhost:4444/v1/audio/transcriptions"
 
 See [POST_TRANSCRIPTION_ACTIONS.md](POST_TRANSCRIPTION_ACTIONS.md) for more details.
 
+### AI Processing (Optional)
+
+Enhance transcriptions with AI (supports 100+ providers via LiteLLM):
+
+```python
+ENABLE_AI_PROCESSING = True
+AI_API_KEY = "your-api-key"
+AI_PROVIDER = 'gemini'  # Options: gemini, openai, anthropic, groq, etc.
+AI_MODEL_NAME = 'gemini-2.5-flash-lite'
+```
+
+**Usage:** Say "create login page, generate this as prompt, hit enter"
+
+See [AI_PROCESSING.md](AI_PROCESSING.md) for setup guide.
+
+### Fast Text Injection (Optional)
+
+For large AI outputs, use clipboard paste instead of typing:
+
+```python
+USE_COPY_PASTE_METHOD = True  # Instant paste via Shift+Insert (fast!)
+```
+
+**Why use it:**
+- AI responses are often 100+ words
+- Clipboard paste is instant regardless of length
+- Character-by-character typing can take 5-10 seconds for long text
+- Preserves your existing clipboard content automatically
+
 After changing config, restart daemon:
 ```bash
 systemctl --user restart any-whisper
