@@ -1,6 +1,8 @@
 # AnyWhisper
 
-A seamless voice-to-text application that uses OpenAI's Whisper model (locally) for high-quality speech recognition and types your words into any application.
+A seamless voice-to-text application that uses OpenAI's Whisper model (locally) for high-quality speech recognition and types your words into any application. It can also post-process your transcription with AI based on trigger phrases before typing the final result.
+
+![AnyWhisper](./AnyWhisper.png)
 
 1. Select an input field and press a keyboard shortcut,
 2. Speak,
@@ -15,12 +17,13 @@ A VibeCoded project that makes VibeCoding even easier by allowing us to speak ou
 - 📴 **Fully Offline Transcription**: Your data stays on your device.
 - 🌍 **True Global Shortcuts**: Use native OS shortcuts to trigger recording
 - 🎤 **Press-to-Talk**: Toggle recording with a keyboard shortcut
-- 🤖 **High-Quality Transcription**: Uses [Faster-Whisper](https://github.com/SYSTRAN/faster-whisper) for accurate speech-to-text
+- 🤖 **High-Quality Transcription**: Uses [Faster-Whisper](https://github.com/SYSTRAN/faster-whisper) for faster accurate speech-to-text
 - ⌨️ **Universal Text Injection**: Works with any application (browser, CLI, IDEs, etc.)
 - 🔇 **Automatic Silence Detection**: Stops recording after detecting silence
 - 🖥️ **Display Server Support**: Works with both X11 and Wayland
 - 📋 **Clipboard Fallback**: Copies to clipboard if text injection fails
-- 🔑 **Post-Transcription Actions**: Press pre-defined keys after transcription based on spoken phrases (like hit enter, press tab, etc.)
+- 🔑 **Post-Transcription Actions**: Press keys after transcription based on spoken phrases
+- 🤖 **AI Processing**: Enhance transcriptions with AI (Gemini/OpenAI) before typing
 - 🔧 **Systemd Integration**: Run as a background service with auto-start
 
 ## Prerequisites
@@ -145,6 +148,55 @@ POST_TRANSCRIPTION_OPT_DOT = True  # Makes patterns flexible to match with/witho
 
 See **[POST_TRANSCRIPTION_ACTIONS.md](POST_TRANSCRIPTION_ACTIONS.md)** for detailed documentation.
 
+### AI Processing
+
+Enhance transcriptions with AI before typing (requires API key). Supports 100+ LLM providers via LiteLLM:
+
+```python
+# Enable AI processing
+ENABLE_AI_PROCESSING = True
+
+# LiteLLM configuration (supports Gemini, OpenAI, Anthropic, Groq, etc.)
+AI_API_KEY = "your-api-key-here"
+AI_PROVIDER = 'gemini'  # Options: gemini, openai, anthropic, groq, etc.
+AI_MODEL_NAME = 'gemini-2.5-flash-lite'  # Model name without provider prefix
+
+# AI triggers
+POST_AI_TRIGGERS = {
+    r'whisper with ai':
+    'GEN_AI_TEMPLATE',
+    r'generate this as prompt': 'ENHANCE_PROMPT_TEMPLATE',
+    r'generate as command': 'COMMAND_GENERATION_TEMPLATE',
+    r'extend the vibe': 'VIBE_EXTEND_TEMPLATE',  # For VibeCoding
+}
+```
+
+**Example:** Say "create login page, generate this as prompt, hit enter"
+- Processes: "create login page" → AI enhances → Types enhanced result → Presses ENTER
+
+**Supported providers:** Google Gemini, OpenAI, Anthropic Claude, Groq, Azure, AWS Bedrock, Huggingface, and more!
+
+See **[AI_PROCESSING.md](AI_PROCESSING.md)** for complete guide.
+
+### Text Injection Method
+
+Choose between typing character-by-character or using clipboard paste:
+
+```python
+# Fast clipboard paste method (recommended for large text like AI outputs)
+USE_COPY_PASTE_METHOD = True  # Uses clipboard + Shift+Insert
+
+# Traditional typing method (more compatible, slower for large text)
+USE_COPY_PASTE_METHOD = False
+```
+
+**Clipboard method benefits:**
+- ⚡ Instant injection regardless of text length
+- 🚀 Perfect for AI-generated responses
+- 📋 Preserves existing clipboard (backs up and restores both CLIPBOARD and PRIMARY selections)
+- 🖥️ Works in terminals and text editors
+- 🔄 Falls back to typing if clipboard fails
+
 ### API Endpoint
 
 If you're running the Whisper API on a different host or port:
@@ -256,10 +308,12 @@ This architecture allows the keyboard shortcut to work **system-wide**, regardle
 
 ```
 Documentation:
-├── QUICKSTART.md          📖 Quick reference
-├── WAYLAND_SETUP.md       🖥️ Wayland guide
-├── README.md              📚 Full docs
-└── YDOTOOL_INTEGRATION.md 🔧 Technical details
+├── QUICKSTART.md               📖 Quick reference
+├── WAYLAND_SETUP.md            🖥️ Wayland guide
+├── POST_TRANSCRIPTION_ACTIONS.md 🔑 Key actions guide
+├── AI_PROCESSING.md            🤖 AI enhancement guide
+├── README.md                   📚 Full docs
+└── YDOTOOL_INTEGRATION.md      🔧 Technical details
 
 Helper Scripts:
 ├── start_daemon.sh        🚀 Quick start
@@ -282,6 +336,7 @@ Main Components:
 - `numpy`: Audio data processing
 - `scipy`: WAV file handling
 - `requests`: HTTP client for API communication
+- `openai`: OpenAI-compatible API client (for AI processing)
 
 ### System Packages
 - `xdotool` (X11): Text injection for X11
@@ -294,7 +349,7 @@ Main Components:
 
 - First transcription may be slower as the Whisper model loads
 - Recording automatically stops after 2 seconds of silence
-- Maximum recording duration is 30 seconds (configurable in `config.py`)
+- Maximum recording duration is 4 minutes (configurable in `config.py`)
 - The Whisper API uses CPU by default; GPU support can be added to the Dockerfile
 
 ## Security Considerations

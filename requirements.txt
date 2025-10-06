@@ -1,5 +1,6 @@
-sounddevice==0.5.1
-numpy==1.26.4
-requests==2.32.3
-scipy==1.13.1
+sounddevice==0.5.2
+numpy==2.3.3
+requests==2.32.5
+scipy==1.16.2
+litellm==1.77.7
 

@@ -23,6 +23,15 @@ TEMP_AUDIO_FILE = f"/tmp/{username}_whisper_recording.wav"
 # Notification settings
 ENABLE_NOTIFICATIONS = True  # Show desktop notifications (requires notify-send)
 
+# Text injection method
+# If True, uses clipboard + Shift+Insert (faster for large text)
+# If False, types character by character (more compatible)
+USE_COPY_PASTE_METHOD = True
+
+# Logging settings
+LOG_FILE = f"/tmp/{username}_anywhisper.log"  # Log file location
+LOG_LEVEL = "INFO"  # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+
 # Post-transcription key actions
 # Enable/disable post-transcription action processing
 ENABLE_TRANSCRIPTION_ACTIONS = True
@@ -65,5 +74,54 @@ YDOTOOL_KEY_CODES = {
     'PAGEDOWN': '109:1 109:0',
     'DELETE': '111:1 111:0',
     'INSERT': '110:1 110:0',
+}
+
+# AI Processing Configuration
+# Enable/disable AI enhancement processing
+ENABLE_AI_PROCESSING = True
+
+# LiteLLM API configuration
+# Supports multiple LLM providers (Gemini, OpenAI, Anthropic, etc.)
+AI_API_KEY = ""
+
+# Provider name (gemini, openai, anthropic, etc.)
+AI_PROVIDER = 'gemini'  # Options: gemini, openai, anthropic, groq, etc.
+
+# Model name (without provider prefix)
+# Google: 'gemini-2.5-flash-lite', 'gemini-2.0-flash-exp'
+# OpenAI: 'gpt-4o', 'gpt-4o-mini'
+# Anthropic: 'claude-sonnet-4-20250514', 'claude-3-5-sonnet-20241022'
+AI_MODEL_NAME = 'gemini-2.5-flash-lite'
+
+# Post-AI Processing Triggers
+# Regex patterns that trigger AI processing
+# If pattern matches, the corresponding template will be used to process the text
+POST_AI_TRIGGERS = {
+    r'whisper with ai': 'GEN_AI_TEMPLATE',
+    r'generate this as prompt': 'ENHANCE_PROMPT_TEMPLATE',
+    r'generate as command': 'COMMAND_GENERATION_TEMPLATE',
+    r'extend the vibe': 'VIBE_EXTEND_TEMPLATE',
+}
+
+# AI Prompt Templates
+# Library of templates with placeholders for user input
+# Use __USER_INPUT__ as placeholder for the transcribed text
+AI_PROMPT_TEMPLATES = {
+    'GEN_AI_TEMPLATE': [
+        {"role": "system", "content": "You are a helpful AI writing assistant. Complete the user's generation request without any preamble, explanations, or meta-commentary."},
+        {"role": "user", "content": "__USER_INPUT__"}
+    ],
+    'ENHANCE_PROMPT_TEMPLATE': [
+        {"role": "system", "content": "You are an expert prompt engineer. Transform the user's brief input into a clear, concise, and actionable prompt. Only expand if necessary. This is a voice-to-text input so correct spelling and grammar when needed. Return only the enhanced prompt without any preamble, explanations, or meta-commentary."},
+        {"role": "user", "content": "__USER_INPUT__"}
+    ],
+    'COMMAND_GENERATION_TEMPLATE': [
+        {"role": "system", "content": "You are a bash command generator. Convert the user's request into a valid bash command. Return ONLY the command, no explanations or markdown."},
+        {"role": "user", "content": "Generate a bash command for: __USER_INPUT__"}
+    ],
+    'VIBE_EXTEND_TEMPLATE': [
+        {"role": "system", "content": "You are assisting with VibeCoding - a conversational AI-assisted coding workflow. The user is giving brief instructions to their AI coding assistant. Transform their concise input into a detailed, actionable prompt that provides context, specifies requirements, mentions best practices, and clearly defines the expected outcome. Make it developer-friendly and ready for an AI coding assistant to act upon. Return only the expanded prompt."},
+        {"role": "user", "content": "__USER_INPUT__"}
+    ],
 }
 

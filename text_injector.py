@@ -4,7 +4,7 @@ import subprocess
 import time
 import os
 import re
-
+from config import USE_COPY_PASTE_METHOD
 
 class TextInjector:
     """Injects text into the currently focused application."""
@@ -49,16 +49,16 @@ class TextInjector:
             print("No text to inject.")
             return False
         
-        # Give a small delay to allow the user to focus the target window
-        # (if they were focused on another window when triggering the shortcut)
-        #time.sleep(0.1)
-        
         try:
-            if self.method == 'x11':
-                success = self._inject_x11(text)
+            # Check if we should use clipboard paste method
+            if USE_COPY_PASTE_METHOD:
+                success = self._inject_via_clipboard(text)
             else:
-                # Wayland - use wtype or ydotool if available
-                success = self._inject_wayland(text)
+                # Traditional character-by-character typing
+                if self.method == 'x11':
+                    success = self._inject_x11(text)
+                else:
+                    success = self._inject_wayland(text)
             
             # Execute post-action if specified and injection was successful
             if success and post_action:
@@ -69,6 +69,189 @@ class TextInjector:
         except Exception as e:
             print(f"Error injecting text: {e}")
             return False
+    
+    def _inject_via_clipboard(self, text):
+        """
+        Inject text via clipboard + Shift+Insert paste.
+        Much faster for large amounts of text.
+        Preserves existing clipboard content by backing it up and restoring it.
+        
+        Args:
+            text (str): The text to inject
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        original_clipboard = None
+        original_primary = None
+        
+        try:
+            # Step 1: Backup current clipboard content (both CLIPBOARD and PRIMARY selections)
+            if self.method == 'wayland':
+                try:
+                    subprocess.run(['which', 'wl-paste'], check=True, capture_output=True, timeout=1)
+                    # Backup clipboard selection
+                    result = subprocess.run(['wl-paste'], capture_output=True, timeout=2, text=False)
+                    if result.returncode == 0:
+                        original_clipboard = result.stdout
+                    # Backup primary selection
+                    result = subprocess.run(['wl-paste', '-p'], capture_output=True, timeout=2, text=False)
+                    if result.returncode == 0:
+                        original_primary = result.stdout
+                except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+                    pass  # No clipboard content or tool not available
+            else:
+                try:
+                    subprocess.run(['which', 'xclip'], check=True, capture_output=True, timeout=1)
+                    # Backup clipboard selection
+                    result = subprocess.run(['xclip', '-selection', 'clipboard', '-o'], capture_output=True, timeout=2, text=False)
+                    if result.returncode == 0:
+                        original_clipboard = result.stdout
+                    # Backup primary selection
+                    result = subprocess.run(['xclip', '-selection', 'primary', '-o'], capture_output=True, timeout=2, text=False)
+                    if result.returncode == 0:
+                        original_primary = result.stdout
+                except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+                    pass  # No clipboard content or tool not available
+            
+            # Step 2: Copy our text to BOTH clipboard and primary selections
+            if self.method == 'wayland':
+                # Use wl-copy for Wayland
+                try:
+                    subprocess.run(['which', 'wl-copy'], check=True, capture_output=True, timeout=1)
+                    # Copy to clipboard selection
+                    process = subprocess.Popen(['wl-copy'], stdin=subprocess.PIPE)
+                    process.communicate(input=text.encode('utf-8'), timeout=2)
+                    # Copy to primary selection
+                    process = subprocess.Popen(['wl-copy', '-p'], stdin=subprocess.PIPE)
+                    process.communicate(input=text.encode('utf-8'), timeout=2)
+                except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+                    print("⚠️  wl-copy not found or failed, falling back to typing")
+                    return self._inject_wayland(text)
+            else:
+                # Use xclip for X11
+                try:
+                    subprocess.run(['which', 'xclip'], check=True, capture_output=True, timeout=1)
+                    # Copy to clipboard selection
+                    process = subprocess.Popen(
+                        ['xclip', '-selection', 'clipboard'],
+                        stdin=subprocess.PIPE
+                    )
+                    process.communicate(input=text.encode('utf-8'), timeout=2)
+                    # Copy to primary selection
+                    process = subprocess.Popen(
+                        ['xclip', '-selection', 'primary'],
+                        stdin=subprocess.PIPE
+                    )
+                    process.communicate(input=text.encode('utf-8'), timeout=2)
+                except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+                    print("⚠️  xclip not found or failed, falling back to typing")
+                    return self._inject_x11(text)
+            
+            # Small delay to ensure clipboard is set
+            time.sleep(0.05)
+            
+            # Step 3: Paste using Shift+Insert
+            paste_success = False
+            if self.method == 'wayland':
+                # Use ydotool to press Shift+Insert
+                script_dir = os.path.dirname(os.path.abspath(__file__))
+                local_ydotool = os.path.join(script_dir, 'ydotool')
+                
+                ydotool_path = None
+                if os.path.exists(local_ydotool) and os.access(local_ydotool, os.X_OK):
+                    ydotool_path = local_ydotool
+                else:
+                    try:
+                        subprocess.run(['which', 'ydotool'], check=True, capture_output=True)
+                        ydotool_path = 'ydotool'
+                    except subprocess.CalledProcessError:
+                        pass
+                
+                if ydotool_path:
+                    # Shift down (42:1), Insert down (110:1), Insert up (110:0), Shift up (42:0)
+                    subprocess.run([ydotool_path, 'key', '42:1', '110:1', '110:0', '42:0'], check=True, timeout=2)
+                    paste_success = True
+                else:
+                    print("⚠️  ydotool not found, falling back to typing")
+                    return self._inject_wayland(text)
+            else:
+                # Use xdotool for X11
+                subprocess.run(['xdotool', 'key', 'shift+Insert'], check=True, timeout=2)
+                paste_success = True
+            
+            # Small delay to ensure paste completes
+            time.sleep(0.05)
+            
+            # Step 4: Restore original clipboard content (both selections)
+            if original_clipboard is not None or original_primary is not None:
+                try:
+                    if self.method == 'wayland':
+                        # Restore clipboard selection
+                        if original_clipboard is not None:
+                            process = subprocess.Popen(['wl-copy'], stdin=subprocess.PIPE)
+                            process.communicate(input=original_clipboard, timeout=2)
+                        # Restore primary selection
+                        if original_primary is not None:
+                            process = subprocess.Popen(['wl-copy', '-p'], stdin=subprocess.PIPE)
+                            process.communicate(input=original_primary, timeout=2)
+                    else:
+                        # Restore clipboard selection
+                        if original_clipboard is not None:
+                            process = subprocess.Popen(['xclip', '-selection', 'clipboard'], stdin=subprocess.PIPE)
+                            process.communicate(input=original_clipboard, timeout=2)
+                        # Restore primary selection
+                        if original_primary is not None:
+                            process = subprocess.Popen(['xclip', '-selection', 'primary'], stdin=subprocess.PIPE)
+                            process.communicate(input=original_primary, timeout=2)
+                except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+                    pass  # Failed to restore, but paste was successful
+            
+            if paste_success:
+                print(f"✅ Text injected via clipboard ({len(text)} chars, both selections restored)")
+                return True
+        
+        except subprocess.TimeoutExpired:
+            print("⚠️  Clipboard paste timed out, falling back to typing")
+            # Try to restore both clipboard selections before falling back
+            self._restore_clipboards(original_clipboard, original_primary)
+            if self.method == 'wayland':
+                return self._inject_wayland(text)
+            else:
+                return self._inject_x11(text)
+        except Exception as e:
+            print(f"⚠️  Clipboard paste failed: {e}, falling back to typing")
+            # Try to restore both clipboard selections before falling back
+            self._restore_clipboards(original_clipboard, original_primary)
+            if self.method == 'wayland':
+                return self._inject_wayland(text)
+            else:
+                return self._inject_x11(text)
+    
+    def _restore_clipboards(self, original_clipboard, original_primary):
+        """Helper method to restore both clipboard selections."""
+        if original_clipboard is not None or original_primary is not None:
+            try:
+                if self.method == 'wayland':
+                    # Restore clipboard selection
+                    if original_clipboard is not None:
+                        process = subprocess.Popen(['wl-copy'], stdin=subprocess.PIPE)
+                        process.communicate(input=original_clipboard, timeout=1)
+                    # Restore primary selection
+                    if original_primary is not None:
+                        process = subprocess.Popen(['wl-copy', '-p'], stdin=subprocess.PIPE)
+                        process.communicate(input=original_primary, timeout=1)
+                else:
+                    # Restore clipboard selection
+                    if original_clipboard is not None:
+                        process = subprocess.Popen(['xclip', '-selection', 'clipboard'], stdin=subprocess.PIPE)
+                        process.communicate(input=original_clipboard, timeout=1)
+                    # Restore primary selection
+                    if original_primary is not None:
+                        process = subprocess.Popen(['xclip', '-selection', 'primary'], stdin=subprocess.PIPE)
+                        process.communicate(input=original_primary, timeout=1)
+            except:
+                pass  # Best effort restore
     
     def _inject_x11(self, text):
         """Inject text using xdotool (X11)."""
@@ -245,4 +428,3 @@ if __name__ == "__main__":
     if not success:
         print("\nFalling back to clipboard...")
         injector.copy_to_clipboard(text)
-
