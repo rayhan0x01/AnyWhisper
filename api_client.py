@@ -58,7 +58,7 @@ class WhisperAPIClient:
             # Try to connect to the API
             response = requests.get(self.api_url.rsplit('/', 1)[0], timeout=5)
             return True
-        except:
+        except (requests.RequestException, OSError):
             return False
 
 

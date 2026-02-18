@@ -4,7 +4,7 @@ import subprocess
 import time
 import os
 import re
-from config import USE_COPY_PASTE_METHOD
+from config import USE_COPY_PASTE_METHOD, YDOTOOL_KEY_CODES
 
 class TextInjector:
     """Injects text into the currently focused application."""
@@ -14,25 +14,15 @@ class TextInjector:
     
     def _detect_display_server(self):
         """Detect whether the system is using X11 or Wayland."""
-        try:
-            session_type = subprocess.check_output(
-                ['echo', '$XDG_SESSION_TYPE'],
-                shell=False
-            ).decode().strip()
-            
-            # Try alternative method
-            if not session_type or session_type == '$XDG_SESSION_TYPE':
-                with open('/proc/self/environ', 'r') as f:
-                    environ = f.read()
-                    if 'wayland' in environ.lower():
-                        return 'wayland'
-                    else:
-                        return 'x11'
-            
+        session_type = os.environ.get("XDG_SESSION_TYPE", "").lower()
+        if session_type in ("wayland", "x11"):
             return session_type
-        except:
-            # Default to X11 if detection fails
-            return 'x11'
+
+        # Fallback: check WAYLAND_DISPLAY
+        if os.environ.get("WAYLAND_DISPLAY"):
+            return "wayland"
+
+        return "x11"
     
     def inject_text(self, text, post_action=None):
         """
@@ -250,7 +240,7 @@ class TextInjector:
                     if original_primary is not None:
                         process = subprocess.Popen(['xclip', '-selection', 'primary'], stdin=subprocess.PIPE)
                         process.communicate(input=original_primary, timeout=1)
-            except:
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
                 pass  # Best effort restore
     
     def _inject_x11(self, text):
@@ -269,8 +259,6 @@ class TextInjector:
     
     def _inject_wayland(self, text):
         """Inject text using ydotool or wtype (Wayland)."""
-        import os
-        
         # Get the script directory to find local ydotool
         script_dir = os.path.dirname(os.path.abspath(__file__))
         local_ydotool = os.path.join(script_dir, 'ydotool')
@@ -314,8 +302,6 @@ class TextInjector:
         Returns:
             bool: True if successful, False otherwise
         """
-        from config import YDOTOOL_KEY_CODES
-        
         # Get key code for the action
         key_code = YDOTOOL_KEY_CODES.get(action.upper())
         if not key_code:

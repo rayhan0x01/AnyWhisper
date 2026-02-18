@@ -10,8 +10,7 @@ import socket
 import sys
 import os
 
-
-SOCKET_PATH = "/tmp/voice_to_text.sock"
+SOCKET_PATH = os.environ.get("SOCKET_PATH", "/tmp/voice_to_text.sock")
 
 
 def send_command(command):

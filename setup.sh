@@ -45,6 +45,23 @@ fi
 sudo apt update
 sudo apt install -y $PACKAGES
 
+# Install udev rule for /dev/uinput (needed for ydotool on Wayland)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+UDEV_RULE="$SCRIPT_DIR/99-uinput.rules"
+if [ -f "$UDEV_RULE" ]; then
+    echo ""
+    echo "Installing udev rule for /dev/uinput..."
+    sudo cp "$UDEV_RULE" /etc/udev/rules.d/99-uinput.rules
+    sudo udevadm control --reload-rules
+    sudo udevadm trigger
+    echo "Installed: /etc/udev/rules.d/99-uinput.rules"
+    # Add user to input group
+    if ! groups "$USER" | grep -qw input; then
+        sudo usermod -aG input "$USER"
+        echo "Added $USER to input group (log out and back in to take effect)."
+    fi
+fi
+
 # Check display server and install appropriate tools
 if [ "$XDG_SESSION_TYPE" = "wayland" ]; then
     echo ""
@@ -122,6 +139,6 @@ echo "  3. Configure global keyboard shortcut in your desktop environment:"
 echo "     Command: $(pwd)/voice_trigger.py"
 echo "     Shortcut: Ctrl+Shift+Space (or your preference)"
 echo ""
-echo "See QUICKSTART.md for detailed instructions!"
+echo "See README.md for detailed instructions!"
 echo ""
 

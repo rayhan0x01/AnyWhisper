@@ -7,7 +7,9 @@ Background service that listens for recording triggers via a Unix socket.
 
 import os
 import socket
+import subprocess
 import threading
+import time
 import signal
 import sys
 import re
@@ -27,11 +29,9 @@ from config import (
     AI_PROMPT_TEMPLATES,
     POST_AI_TRIGGERS,
     LOG_FILE,
-    LOG_LEVEL
+    LOG_LEVEL,
+    SOCKET_PATH
 )
-
-
-SOCKET_PATH = "/tmp/voice_to_text.sock"
 
 # Setup logging
 logging.basicConfig(
@@ -72,8 +72,11 @@ class VoiceDaemon:
     def notify(self, title, message):
         """Send desktop notification."""
         try:
-            os.system(f'notify-send "{title}" "{message}" 2>/dev/null &')
-        except:
+            subprocess.Popen(
+                ['notify-send', title, message],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+        except OSError:
             pass
     
     def start_recording(self):
@@ -210,8 +213,6 @@ class VoiceDaemon:
     
     def _monitor_recording(self):
         """Monitor the recording and auto-process when it stops."""
-        import time
-        
         logger.debug("Recording monitor: watching for automatic stop")
         
         # Wait while recording is active
@@ -345,7 +346,7 @@ class VoiceDaemon:
         try:
             if os.path.exists(audio_file):
                 os.remove(audio_file)
-        except:
+        except OSError:
             pass
     
     def handle_client(self, client_socket):
@@ -381,32 +382,33 @@ class VoiceDaemon:
         if self.text_injector.method != 'wayland':
             logger.debug("Not on Wayland, skipping ydotoold start")
             return
-        
+
         logger.info("Checking ydotoold status (Wayland mode)")
         # Check if ydotoold is already running
         try:
-            result = os.popen('pgrep -x ydotoold').read().strip()
-            if result:
+            result = subprocess.run(
+                ['pgrep', '-x', 'ydotoold'],
+                capture_output=True, text=True, timeout=5
+            )
+            if result.returncode == 0 and result.stdout.strip():
                 logger.info("ydotoold already running")
                 print("✓ ydotoold already running")
                 return
-        except:
+        except (subprocess.TimeoutExpired, OSError):
             pass
-        
+
         # Try to start local ydotoold
         script_dir = os.path.dirname(os.path.abspath(__file__))
         ydotoold_path = os.path.join(script_dir, 'ydotoold')
-        
+
         if os.path.exists(ydotoold_path) and os.access(ydotoold_path, os.X_OK):
             try:
-                import subprocess
                 logger.info(f"Starting local ydotoold from: {ydotoold_path}")
                 self.ydotoold_process = subprocess.Popen([ydotoold_path])
-                import time
                 time.sleep(1)
                 logger.info("Local ydotoold daemon started successfully")
                 print("✓ Started local ydotoold daemon")
-            except Exception as e:
+            except OSError as e:
                 logger.error(f"Could not start ydotoold: {e}")
                 print(f"⚠️  Could not start ydotoold: {e}")
     
@@ -501,9 +503,9 @@ class VoiceDaemon:
         try:
             os.unlink(SOCKET_PATH)
             logger.debug(f"Removed socket: {SOCKET_PATH}")
-        except:
+        except OSError:
             pass
-        
+
         # Stop ydotoold if we started it
         if self.ydotoold_process:
             try:
@@ -512,9 +514,8 @@ class VoiceDaemon:
                 self.ydotoold_process.wait(timeout=5)
                 logger.info("ydotoold stopped successfully")
                 print("Stopped ydotoold daemon")
-            except:
+            except (subprocess.TimeoutExpired, OSError):
                 logger.warning("ydotoold did not stop gracefully")
-                pass
         
         logger.info("AnyWhisper Daemon stopped")
         logger.info("=" * 60)

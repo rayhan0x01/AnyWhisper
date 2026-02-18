@@ -1,43 +1,47 @@
-# get username
-import os
-username = os.getenv('USER')
-
 """Configuration settings for the AnyWhisper application."""
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+username = os.getenv('USER')
+
+
+def _bool(val):
+    """Parse a boolean from an environment variable string."""
+    return val.lower() in ("true", "1", "yes")
+
+
 # Whisper API settings
-WHISPER_API_URL = "http://localhost:4444/v1/audio/transcriptions"
+WHISPER_API_URL = os.getenv("WHISPER_API_URL", "http://localhost:4444/v1/audio/transcriptions")
 
 # Audio recording settings
-SAMPLE_RATE = 16000  # Sample rate in Hz (Whisper works best with 16kHz)
-CHANNELS = 1  # Mono audio
-AUDIO_FORMAT = 'wav'  # Audio file format
+SAMPLE_RATE = int(os.getenv("SAMPLE_RATE", "16000"))
+CHANNELS = int(os.getenv("CHANNELS", "1"))
+AUDIO_FORMAT = os.getenv("AUDIO_FORMAT", "wav")
 
 # Recording behavior
-MAX_RECORDING_DURATION = 240  # Maximum recording duration in seconds
-SILENCE_THRESHOLD = 0.01  # Silence detection threshold (0.0 to 1.0)
-SILENCE_DURATION = 2.0  # Duration of silence to stop recording (seconds)
+MAX_RECORDING_DURATION = int(os.getenv("MAX_RECORDING_DURATION", "240"))
+SILENCE_THRESHOLD = float(os.getenv("SILENCE_THRESHOLD", "0.01"))
+SILENCE_DURATION = float(os.getenv("SILENCE_DURATION", "4.0"))
 
 # Temp file settings
 TEMP_AUDIO_FILE = f"/tmp/{username}_whisper_recording.wav"
 
 # Notification settings
-ENABLE_NOTIFICATIONS = True  # Show desktop notifications (requires notify-send)
+ENABLE_NOTIFICATIONS = _bool(os.getenv("ENABLE_NOTIFICATIONS", "true"))
 
 # Text injection method
-# If True, uses clipboard + Shift+Insert (faster for large text)
-# If False, types character by character (more compatible)
-USE_COPY_PASTE_METHOD = True
+USE_COPY_PASTE_METHOD = _bool(os.getenv("USE_COPY_PASTE_METHOD", "true"))
 
 # Logging settings
-LOG_FILE = f"/tmp/{username}_anywhisper.log"  # Log file location
-LOG_LEVEL = "INFO"  # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+LOG_FILE = f"/tmp/{username}_anywhisper.log"
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 # Post-transcription key actions
-# Enable/disable post-transcription action processing
-ENABLE_TRANSCRIPTION_ACTIONS = True
+ENABLE_TRANSCRIPTION_ACTIONS = _bool(os.getenv("ENABLE_TRANSCRIPTION_ACTIONS", "true"))
 
-# Regex patterns to match against transcription text
-# If pattern matches, the corresponding key action will be executed after typing
 POST_TRANSCRIPTION_ACTIONS = {
     r'hit enter$': 'ENTER',
     r'^enter$': 'ENTER',
@@ -49,14 +53,9 @@ POST_TRANSCRIPTION_ACTIONS = {
     r'press escape$': 'ESCAPE',
 }
 
-# Auto-handle optional period at end of transcription
-# Whisper sometimes adds a period to complete sentences
-# If True, patterns ending with $ will also match an optional period (\.?)
-# Example: "hit enter$" will match both "hit enter" and "hit enter."
-POST_TRANSCRIPTION_OPT_DOT = True
+POST_TRANSCRIPTION_OPT_DOT = _bool(os.getenv("POST_TRANSCRIPTION_OPT_DOT", "true"))
 
 # ydotool key codes for common keys
-# Format: keycode:1 keycode:0 (press and release)
 YDOTOOL_KEY_CODES = {
     'ENTER': '28:1 28:0',
     'ESCAPE': '1:1 1:0',
@@ -77,25 +76,13 @@ YDOTOOL_KEY_CODES = {
 }
 
 # AI Processing Configuration
-# Enable/disable AI enhancement processing
-ENABLE_AI_PROCESSING = True
+ENABLE_AI_PROCESSING = _bool(os.getenv("ENABLE_AI_PROCESSING", "true"))
 
-# LiteLLM API configuration
-# Supports multiple LLM providers (Gemini, OpenAI, Anthropic, etc.)
-AI_API_KEY = ""
-
-# Provider name (gemini, openai, anthropic, etc.)
-AI_PROVIDER = 'gemini'  # Options: gemini, openai, anthropic, groq, etc.
-
-# Model name (without provider prefix)
-# Google: 'gemini-2.5-flash-lite', 'gemini-2.0-flash-exp'
-# OpenAI: 'gpt-4o', 'gpt-4o-mini'
-# Anthropic: 'claude-sonnet-4-20250514', 'claude-3-5-sonnet-20241022'
-AI_MODEL_NAME = 'gemini-2.5-flash-lite'
+AI_API_KEY = os.getenv("AI_API_KEY", "")
+AI_PROVIDER = os.getenv("AI_PROVIDER", "gemini")
+AI_MODEL_NAME = os.getenv("AI_MODEL_NAME", "gemini-2.5-flash-lite")
 
 # Post-AI Processing Triggers
-# Regex patterns that trigger AI processing
-# If pattern matches, the corresponding template will be used to process the text
 POST_AI_TRIGGERS = {
     r'whisper with ai': 'GEN_AI_TEMPLATE',
     r'generate this as prompt': 'ENHANCE_PROMPT_TEMPLATE',
@@ -104,8 +91,6 @@ POST_AI_TRIGGERS = {
 }
 
 # AI Prompt Templates
-# Library of templates with placeholders for user input
-# Use __USER_INPUT__ as placeholder for the transcribed text
 AI_PROMPT_TEMPLATES = {
     'GEN_AI_TEMPLATE': [
         {"role": "system", "content": "You are a helpful AI writing assistant. Complete the user's generation request without any preamble, explanations, or meta-commentary."},
@@ -125,3 +110,5 @@ AI_PROMPT_TEMPLATES = {
     ],
 }
 
+# Daemon socket path
+SOCKET_PATH = os.getenv("SOCKET_PATH", "/tmp/voice_to_text.sock")
